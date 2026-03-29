@@ -1,0 +1,866 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LabRecon — CPAP Therapy Report</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+  :root {
+    --bg: #1a1a1a;
+    --bg2: #222222;
+    --bg3: #2a2a2a;
+    --bg4: #313131;
+    --border: rgba(255,255,255,0.08);
+    --border2: rgba(255,255,255,0.14);
+    --text: #f0ede8;
+    --text2: #a09d98;
+    --text3: #6b6866;
+    --green: #4ade80;
+    --green-bg: rgba(74,222,128,0.1);
+    --green-border: rgba(74,222,128,0.25);
+    --amber: #fbbf24;
+    --amber-bg: rgba(251,191,36,0.1);
+    --amber-border: rgba(251,191,36,0.25);
+    --red: #f87171;
+    --red-bg: rgba(248,113,113,0.1);
+    --red-border: rgba(248,113,113,0.25);
+    --blue: #60a5fa;
+    --blue-bg: rgba(96,165,250,0.1);
+    --teal: #2dd4bf;
+    --mono: 'DM Mono', monospace;
+    --sans: 'DM Sans', sans-serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    font-size: 14px;
+    line-height: 1.6;
+    min-height: 100vh;
+  }
+
+  .page {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 48px 32px 80px;
+  }
+
+  /* HEADER */
+  .header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    margin-bottom: 40px;
+    padding-bottom: 28px;
+    border-bottom: 1px solid var(--border);
+  }
+  .logo {
+    font-family: var(--mono);
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--teal);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    margin-bottom: 12px;
+  }
+  .report-title {
+    font-size: 26px;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    color: var(--text);
+    margin-bottom: 6px;
+  }
+  .report-meta {
+    font-size: 13px;
+    color: var(--text3);
+    font-family: var(--mono);
+  }
+  .header-right {
+    text-align: right;
+  }
+  .patient-name {
+    font-size: 15px;
+    font-weight: 500;
+    margin-bottom: 4px;
+  }
+  .patient-meta {
+    font-size: 12px;
+    color: var(--text3);
+    font-family: var(--mono);
+    line-height: 1.8;
+  }
+
+  /* SECTION LABEL */
+  .section-label {
+    font-family: var(--mono);
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--text3);
+    margin-bottom: 14px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  /* METRIC GRID */
+  .metric-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+    margin-bottom: 10px;
+  }
+  .metric-grid-2 {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+    margin-bottom: 32px;
+  }
+  .metric-card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px;
+  }
+  .metric-label {
+    font-size: 11px;
+    color: var(--text3);
+    font-family: var(--mono);
+    margin-bottom: 6px;
+  }
+  .metric-value {
+    font-size: 24px;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    line-height: 1.1;
+    margin-bottom: 5px;
+  }
+  .metric-sub {
+    font-size: 11px;
+    color: var(--text3);
+    line-height: 1.4;
+  }
+  .metric-value.green { color: var(--green); }
+  .metric-value.amber { color: var(--amber); }
+  .metric-value.red { color: var(--red); }
+  .metric-value.neutral { color: var(--text); }
+
+  /* BADGE */
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    font-size: 10px;
+    font-family: var(--mono);
+    font-weight: 500;
+    padding: 3px 8px;
+    border-radius: 4px;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+  .badge.green { background: var(--green-bg); color: var(--green); border: 1px solid var(--green-border); }
+  .badge.amber { background: var(--amber-bg); color: var(--amber); border: 1px solid var(--amber-border); }
+  .badge.red { background: var(--red-bg); color: var(--red); border: 1px solid var(--red-border); }
+  .badge.blue { background: var(--blue-bg); color: var(--blue); border: 1px solid rgba(96,165,250,0.25); }
+
+  /* CHART SECTION */
+  .chart-section {
+    margin-bottom: 32px;
+  }
+  .chart-desc {
+    font-size: 12px;
+    color: var(--text3);
+    margin-bottom: 12px;
+    line-height: 1.5;
+  }
+  .chart-container {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 20px 20px 16px;
+  }
+  .chart-wrap { position: relative; width: 100%; }
+
+  /* INSIGHT CARDS */
+  .insights-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 32px;
+  }
+  .insight-card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px;
+  }
+  .insight-card.full {
+    grid-column: 1 / -1;
+  }
+  .insight-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 8px;
+  }
+  .insight-title {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text);
+    line-height: 1.4;
+  }
+  .insight-body {
+    font-size: 12.5px;
+    color: var(--text2);
+    line-height: 1.65;
+  }
+  .insight-body strong {
+    color: var(--text);
+    font-weight: 500;
+  }
+
+  /* LABS SECTION */
+  .labs-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 32px;
+  }
+  .lab-card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px;
+  }
+  .lab-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 8px;
+  }
+  .lab-name {
+    font-family: var(--mono);
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text);
+  }
+  .lab-value {
+    font-family: var(--mono);
+    font-size: 13px;
+    font-weight: 500;
+  }
+  .lab-value.amber { color: var(--amber); }
+  .lab-value.red { color: var(--red); }
+  .lab-value.green { color: var(--green); }
+  .lab-body {
+    font-size: 12px;
+    color: var(--text2);
+    line-height: 1.6;
+  }
+  .lab-connection {
+    font-size: 11px;
+    color: var(--teal);
+    font-family: var(--mono);
+    margin-bottom: 6px;
+  }
+
+  /* ACTION TABLE */
+  .action-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 40px;
+  }
+  .action-table th {
+    text-align: left;
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text3);
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--border2);
+    font-weight: 500;
+  }
+  .action-table td {
+    padding: 14px 12px;
+    border-bottom: 1px solid var(--border);
+    vertical-align: top;
+    font-size: 13px;
+  }
+  .action-table tr:last-child td { border-bottom: none; }
+  .action-num {
+    font-family: var(--mono);
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--text3);
+    width: 40px;
+  }
+  .action-name { font-weight: 500; color: var(--text); }
+  .action-why { color: var(--text2); font-size: 12px; }
+  .action-impact { color: var(--teal); font-size: 12px; font-family: var(--mono); }
+
+  /* FOOTER */
+  .footer {
+    padding-top: 28px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .footer-logo { font-family: var(--mono); font-size: 12px; color: var(--teal); letter-spacing: 0.1em; text-transform: uppercase; }
+  .footer-note { font-size: 11px; color: var(--text3); max-width: 400px; text-align: right; line-height: 1.5; }
+
+  /* DIVIDER */
+  .divider { height: 1px; background: var(--border); margin: 28px 0; }
+
+  /* SCORE RING */
+  .score-section {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 20px 24px;
+    margin-bottom: 32px;
+  }
+  .score-ring {
+    position: relative;
+    width: 88px;
+    height: 88px;
+    flex-shrink: 0;
+  }
+  .score-ring svg { transform: rotate(-90deg); }
+  .score-ring-label {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+  }
+  .score-num { font-family: var(--mono); font-size: 22px; font-weight: 600; color: var(--green); line-height: 1; }
+  .score-max { font-size: 10px; color: var(--text3); font-family: var(--mono); }
+  .score-info {}
+  .score-title { font-size: 16px; font-weight: 600; margin-bottom: 4px; }
+  .score-desc { font-size: 12.5px; color: var(--text2); line-height: 1.55; }
+
+  .legend-row {
+    display: flex;
+    gap: 16px;
+    margin-bottom: 10px;
+    flex-wrap: wrap;
+  }
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    color: var(--text3);
+    font-family: var(--mono);
+  }
+  .legend-dot {
+    width: 8px; height: 8px; border-radius: 2px; flex-shrink: 0;
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <!-- HEADER -->
+  <div class="header">
+    <div>
+      <div class="report-title">CPAP Therapy Report</div>
+      <div class="report-meta">ResMed AirSense 10 AutoSet &nbsp;·&nbsp; Jan 14 – Mar 26, 2026 &nbsp;·&nbsp; 51 nights analyzed</div>
+    </div>
+    <div class="header-right">
+      <div class="patient-name" style="filter: blur(6px); user-select: none;">Quincy Westbrook</div>
+      <div class="patient-meta">
+        Age 38 &nbsp;·&nbsp; 236 lbs<br>
+        OSA, MDD &nbsp;·&nbsp; On TRT + Tirzepatide<br>
+        CPAP started ~Dec 2025
+      </div>
+    </div>
+  </div>
+
+  <!-- OVERALL SCORE -->
+  <div class="score-section">
+    <div class="score-ring">
+      <svg width="88" height="88" viewBox="0 0 88 88">
+        <circle cx="44" cy="44" r="36" fill="none" stroke="#2a2a2a" stroke-width="8"/>
+        <circle cx="44" cy="44" r="36" fill="none" stroke="#4ade80" stroke-width="8"
+          stroke-dasharray="226" stroke-dashoffset="45" stroke-linecap="round"/>
+      </svg>
+      <div class="score-ring-label">
+        <div class="score-num">82</div>
+        <div class="score-max">/100</div>
+      </div>
+    </div>
+    <div class="score-info">
+      <div class="score-title">Therapy Score &nbsp; <span class="badge green">Good</span></div>
+      <div class="score-desc">Your CPAP is controlling your sleep apnea extremely well. AHI is excellent on every night recorded. The main opportunity is using it longer each night. Improving from 4.3 to 6+ hours would move this score to 90+.</div>
+    </div>
+  </div>
+
+  <!-- KEY METRICS ROW 1 -->
+  <div class="section-label">Key metrics — overall</div>
+  <div class="metric-grid">
+    <div class="metric-card">
+      <div class="metric-label">Average AHI</div>
+      <div class="metric-value green">0.34</div>
+      <div class="metric-sub">Normal = below 5<br><span style="color:var(--green)">Excellent</span></div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-label">Mask Leak</div>
+      <div class="metric-value green">0.19 <span style="font-size:14px;font-weight:400">L/min</span></div>
+      <div class="metric-sub">95th pct: 0.7<br><span style="color:var(--green)">Near perfect seal</span></div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-label">Avg Pressure</div>
+      <div class="metric-value neutral">8.7 <span style="font-size:14px;font-weight:400">cmH2O</span></div>
+      <div class="metric-sub">95th pct: 10.2<br>Low-moderate range</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-label">Usage Compliance</div>
+      <div class="metric-value amber">58%</div>
+      <div class="metric-sub">Nights 4+hrs<br><span style="color:var(--amber)">Target is 70%+</span></div>
+    </div>
+  </div>
+  <div class="metric-grid-2">
+    <div class="metric-card">
+      <div class="metric-label">Total nights tracked</div>
+      <div class="metric-value neutral">51</div>
+      <div class="metric-sub">Jan 14 – Mar 26</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-label">Avg sleep duration</div>
+      <div class="metric-value amber">4.3 <span style="font-size:14px;font-weight:400">hrs</span></div>
+      <div class="metric-sub">Target 7–9 hrs</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-label">Avg resp rate</div>
+      <div class="metric-value amber">20.6 <span style="font-size:14px;font-weight:400">br/min</span></div>
+      <div class="metric-sub">Normal: 12–20<br><span style="color:var(--amber)">Slightly high</span></div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-label">Highest AHI night</div>
+      <div class="metric-value neutral">2.17</div>
+      <div class="metric-sub">Feb 27 — still normal<br>Short session (1.4 hrs)</div>
+    </div>
+  </div>
+
+  <!-- CHART 1: NIGHTLY AHI -->
+  <div class="chart-section">
+    <div class="section-label">Nightly AHI — all 51 nights</div>
+    <div class="chart-desc">Each bar is one night. Green = excellent (below 5). Every single night recorded was in the normal range.</div>
+    <div class="legend-row">
+      <div class="legend-item"><div class="legend-dot" style="background:#4ade80"></div>Normal (AHI &lt; 5)</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#fbbf24"></div>Mild (5–14)</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#f87171"></div>Moderate/Severe (15+)</div>
+    </div>
+    <div class="chart-container">
+      <div class="chart-wrap" style="height:160px"><canvas id="ahiChart"></canvas></div>
+    </div>
+  </div>
+
+  <!-- CHART 2: WEEKLY -->
+  <div class="chart-section">
+    <div class="section-label">Weekly averages — AHI and usage hours</div>
+    <div class="chart-desc">Green bars = average hours of CPAP use that week. Blue line = average AHI. Goal: bars taller (more hours), line stays flat and low.</div>
+    <div class="chart-container">
+      <div class="chart-wrap" style="height:200px"><canvas id="weeklyChart"></canvas></div>
+    </div>
+  </div>
+
+  <!-- CHART 3: SLEEP TIMING -->
+  <div class="chart-section">
+    <div class="section-label">Sleep start times — when you put the mask on</div>
+    <div class="chart-desc">Each dot is one night. Green = before midnight (good). Amber = 12–2 AM (late). Red = after 2 AM (very late). Most nights fall in amber or red — this is the main behavioral pattern to shift.</div>
+    <div class="legend-row">
+      <div class="legend-item"><div class="legend-dot" style="background:#4ade80"></div>Before midnight</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#fbbf24"></div>12–2 AM</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#f87171"></div>After 2 AM</div>
+    </div>
+    <div class="chart-container">
+      <div class="chart-wrap" style="height:150px"><canvas id="timingChart"></canvas></div>
+    </div>
+  </div>
+
+  <!-- WHAT THE NUMBERS MEAN -->
+  <div class="section-label">What the numbers mean — plain English</div>
+  <div class="insights-grid">
+
+    <div class="insight-card">
+      <div class="insight-header">
+        <div class="insight-title">Your CPAP is working extremely well</div>
+        <span class="badge green">Excellent</span>
+      </div>
+      <div class="insight-body">AHI counts how many times per hour your breathing stops or gets shallow. Before CPAP, your OSA was likely causing 15–30+ events per hour. Now your average is <strong>0.34 per hour</strong> — meaning in an 8-hour night, roughly 2–3 minor events total. Anything under 5 is fully normal.</div>
+    </div>
+
+    <div class="insight-card">
+      <div class="insight-header">
+        <div class="insight-title">Mask seal is near perfect</div>
+        <span class="badge green">Excellent</span>
+      </div>
+      <div class="insight-body">Leak rate measures air escaping around your mask instead of going into your airway. Your average of <strong>0.19 L/min</strong> is essentially zero. High leaks cause dry mouth and wasted therapy. Zero large-leak nights recorded across 51 nights.</div>
+    </div>
+
+    <div class="insight-card">
+      <div class="insight-header">
+        <div class="insight-title">Machine is self-adjusting appropriately</div>
+        <span class="badge blue">Good</span>
+      </div>
+      <div class="insight-body">Your AirSense 10 AutoSet adjusts pressure throughout the night automatically. Average pressure <strong>8.7 cmH2O</strong>, 95th percentile 10.2 — the machine rarely needs to go above that. This is moderate pressure suggesting your obstruction is not severe at its worst.</div>
+    </div>
+
+    <div class="insight-card">
+      <div class="insight-header">
+        <div class="insight-title">Usage is the main thing to improve</div>
+        <span class="badge amber">Needs work</span>
+      </div>
+      <div class="insight-body">The clinical standard is 4+ hours on 70% of nights. You're at <strong>58%</strong>. Six nights were under 2 hours. Each additional hour of use meaningfully improves HRV, mood, and long-term health outcomes. The therapy works — you just need more of it.</div>
+    </div>
+
+    <div class="insight-card full">
+      <div class="insight-header">
+        <div class="insight-title">Sleep timing: consistently delayed — this is limiting everything else</div>
+        <span class="badge amber">Attention needed</span>
+      </div>
+      <div class="insight-body">You're putting the mask on between midnight and 4 AM on most nights — and on several nights as late as 5–6 AM, then sleeping only 1–2 hours. This is called a <strong>delayed sleep phase</strong> pattern. Your body's internal clock is shifted late. This reduces melatonin production, keeps cortisol elevated at night, and caps how much deep and REM sleep you can get regardless of how well the CPAP performs. Shifting bedtime to before midnight on most nights would automatically increase your CPAP hours and improve every other metric in this report.</div>
+    </div>
+
+    <div class="insight-card">
+      <div class="insight-header">
+        <div class="insight-title">Central apneas: minor, monitor only</div>
+        <span class="badge amber">Monitor</span>
+      </div>
+      <div class="insight-body">You had 14 central apneas across all nights (avg 0.27/night). Central apneas are different from obstructive — they happen when the brain momentarily forgets to send the breathing signal. CPAP handles obstructive ones perfectly but cannot fully prevent central events. At this level it is not clinically concerning. Mention to your sleep doctor at next follow-up.</div>
+    </div>
+
+    <div class="insight-card">
+      <div class="insight-header">
+        <div class="insight-title">Respiratory rate slightly elevated</div>
+        <span class="badge amber">Monitor</span>
+      </div>
+      <div class="insight-body">Normal sleeping respiratory rate is 12–20 breaths per minute. Your average is <strong>20.6</strong> — just above the upper limit. This is consistent across all 11 weeks without worsening. As your weight continues to drop on Tirzepatide and your sleep timing improves, this should normalize naturally.</div>
+    </div>
+
+  </div>
+
+  <!-- LABS CONNECTION -->
+  <div class="section-label">Connection to your labs and health conditions</div>
+  <div class="labs-grid">
+
+    <div class="lab-card">
+      <div class="lab-header">
+        <div>
+          <div class="lab-connection">HCT 53.6% — OSA connection</div>
+          <div class="lab-name">Hematocrit (red blood cell %)</div>
+        </div>
+        <div class="lab-value amber">53.6%</div>
+      </div>
+      <div class="lab-body">Elevated HCT is partly caused by OSA. When breathing stops repeatedly, oxygen drops and your body makes more red blood cells to compensate. Now that CPAP is controlling your airway, this should normalize over the next 6–12 months. Your March labs already showed improvement from January. Continued CPAP compliance drives this down directly.</div>
+    </div>
+
+    <div class="lab-card">
+      <div class="lab-header">
+        <div>
+          <div class="lab-connection">HRV 39ms (Apple Watch) — direct link</div>
+          <div class="lab-name">Heart Rate Variability</div>
+        </div>
+        <div class="lab-value amber">39ms</div>
+      </div>
+      <div class="lab-body">HRV improved from lows of 14–18ms in Oct/Nov to a recent high of 45.9ms — directly tracking the CPAP start. Nights where CPAP was used for 6+ hours correspond to better HRV readings the following day. Getting to consistent 6–7 hour sessions would push HRV significantly higher. Target: 55–70ms.</div>
+    </div>
+
+    <div class="lab-card">
+      <div class="lab-header">
+        <div>
+          <div class="lab-connection">MDD — sleep quality is medicine</div>
+          <div class="lab-name">Major Depressive Disorder</div>
+        </div>
+        <div class="lab-value amber">Active</div>
+      </div>
+      <div class="lab-body">OSA and depression amplify each other. Poor sleep fragments mood regulation, reduces serotonin and dopamine, and keeps stress hormones elevated. Your resting heart rate dropped from 91–95 bpm pre-CPAP to 70–72 bpm now — a real reduction in physiological stress. Improving sleep duration from 4.3 to 6–7 hours would have meaningful additional impact on MDD beyond medication alone.</div>
+    </div>
+
+    <div class="lab-card">
+      <div class="lab-header">
+        <div>
+          <div class="lab-connection">Vitamin D 19 ng/mL — sleep connection</div>
+          <div class="lab-name">25-OH Vitamin D</div>
+        </div>
+        <div class="lab-value red">19 ng/mL</div>
+      </div>
+      <div class="lab-body">Vitamin D deficiency independently impairs sleep quality and increases OSA severity. Clinical deficiency starts below 20. Correcting this with 5,000–10,000 IU daily (target 50–70 ng/mL) supports both sleep architecture and MDD. Your current dosing schedule will not get levels up fast enough — this is worth addressing now.</div>
+    </div>
+
+  </div>
+
+  <!-- ACTION ITEMS -->
+  <div class="section-label">Top 5 action items</div>
+  <table class="action-table">
+    <thead>
+      <tr>
+        <th style="width:40px">#</th>
+        <th>Action</th>
+        <th>Why it matters</th>
+        <th>Expected outcome</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class="action-num">1</td>
+        <td><div class="action-name">Increase nightly CPAP use to 6+ hours</div></td>
+        <td><div class="action-why">Averaging 4.3 hrs at 58% compliance — below the clinical standard of 4 hrs on 70% of nights</div></td>
+        <td><div class="action-impact">HRV +10–15ms, HCT normalization, direct MDD improvement</div></td>
+      </tr>
+      <tr>
+        <td class="action-num">2</td>
+        <td><div class="action-name">Shift sleep start to before midnight consistently</div></td>
+        <td><div class="action-why">Going to sleep 1–4 AM on most nights. Circadian misalignment limits melatonin, deep sleep, and automatically reduces CPAP hours</div></td>
+        <td><div class="action-impact">More deep sleep, better melatonin, higher CPAP hours — every metric improves automatically</div></td>
+      </tr>
+      <tr>
+        <td class="action-num">3</td>
+        <td><div class="action-name">Increase Vitamin D3 to 5,000–10,000 IU daily</div></td>
+        <td><div class="action-why">Level at 19 ng/mL (clinically deficient). Directly impairs sleep quality and OSA severity</div></td>
+        <td><div class="action-impact">Better sleep architecture, supports MDD, improves CPAP effectiveness</div></td>
+      </tr>
+      <tr>
+        <td class="action-num">4</td>
+        <td><div class="action-name">Discuss central apneas with your sleep doctor at next visit</div></td>
+        <td><div class="action-why">14 central apneas recorded across 51 nights (avg 0.27/night). CPAP controls obstructive events perfectly but cannot prevent central events. Feb 3 had 3 central apneas in one night — the highest single-night count in the dataset</div></td>
+        <td><div class="action-impact">Early flag for treatment-emergent central sleep apnea. Caught early, manageable with pressure or mode adjustment</div></td>
+      </tr>
+      <tr>
+        <td class="action-num">5</td>
+        <td><div class="action-name">Eliminate sessions under 2 hours — mask off or never on</div></td>
+        <td><div class="action-why">6 nights recorded under 2 hours of use (Jan 14, Jan 19, Jan 27, Feb 27, Mar 1, Mar 15). Short sessions skew compliance metrics and provide minimal therapeutic benefit. Feb 27 had the highest AHI of the entire dataset (2.17) and was only a 1.4-hour session</div></td>
+        <td><div class="action-impact">Removing these outliers alone would raise average session length and push compliance past the 70% target</div></td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- FOOTER -->
+  <div class="footer">
+    <div class="footer-note" style="text-align:left;">This report is for informational purposes only and does not constitute medical advice. Share with your sleep physician or healthcare provider. Generated March 28, 2026.</div>
+  </div>
+
+</div>
+
+<script id="reportData" type="application/json">
+{
+  "report_meta": {
+    "device": "ResMed AirSense 10 AutoSet",
+    "date_range": { "start": "2026-01-14", "end": "2026-03-26" },
+    "total_nights": 51,
+    "generated": "2026-03-28"
+  },
+  "patient": {
+    "age": 38,
+    "weight_lbs": 236,
+    "conditions": ["OSA", "MDD"],
+    "medications": ["TRT", "Tirzepatide"],
+    "cpap_start": "2025-12"
+  },
+  "summary": {
+    "therapy_score": 82,
+    "ahi_avg": 0.34,
+    "ahi_median": 0.25,
+    "ahi_max": 2.17,
+    "ahi_max_date": "2026-02-27",
+    "mask_leak_avg_lpm": 0.19,
+    "mask_leak_95th_lpm": 0.7,
+    "pressure_avg_cmh2o": 8.7,
+    "pressure_95th_cmh2o": 10.2,
+    "usage_avg_hours": 4.3,
+    "compliance_pct": 58,
+    "nights_4plus_hours": 30,
+    "nights_under_2_hours": 6,
+    "resp_rate_avg": 20.6,
+    "ahi_normal_nights": 51,
+    "ahi_mild_nights": 0,
+    "ahi_moderate_nights": 0,
+    "ahi_severe_nights": 0,
+    "total_obstructive_apneas": 33,
+    "total_central_apneas": 14,
+    "total_hypopneas": 24,
+    "total_vibratory_snores": 0
+  },
+  "weekly": [
+    { "week": "W2",  "avg_ahi": 0.08, "avg_hours": 3.9, "avg_pressure": 8.1, "avg_leak": 0.29, "avg_rr": 18.2, "nights": 2 },
+    { "week": "W3",  "avg_ahi": 0.34, "avg_hours": 3.9, "avg_pressure": 8.8, "avg_leak": 0.44, "avg_rr": 19.7, "nights": 4 },
+    { "week": "W4",  "avg_ahi": 0.11, "avg_hours": 3.7, "avg_pressure": 8.7, "avg_leak": 0.70, "avg_rr": 20.4, "nights": 4 },
+    { "week": "W5",  "avg_ahi": 0.50, "avg_hours": 4.3, "avg_pressure": 9.0, "avg_leak": 0.18, "avg_rr": 20.1, "nights": 3 },
+    { "week": "W6",  "avg_ahi": 0.21, "avg_hours": 4.7, "avg_pressure": 9.3, "avg_leak": 0.09, "avg_rr": 19.9, "nights": 4 },
+    { "week": "W7",  "avg_ahi": 0.29, "avg_hours": 5.5, "avg_pressure": 9.0, "avg_leak": 0.11, "avg_rr": 21.0, "nights": 6 },
+    { "week": "W8",  "avg_ahi": 0.70, "avg_hours": 4.2, "avg_pressure": 8.7, "avg_leak": 0.11, "avg_rr": 20.8, "nights": 7 },
+    { "week": "W9",  "avg_ahi": 0.34, "avg_hours": 3.8, "avg_pressure": 8.8, "avg_leak": 0.05, "avg_rr": 21.0, "nights": 7 },
+    { "week": "W10", "avg_ahi": 0.35, "avg_hours": 4.9, "avg_pressure": 8.6, "avg_leak": 0.07, "avg_rr": 21.8, "nights": 6 },
+    { "week": "W11", "avg_ahi": 0.32, "avg_hours": 3.5, "avg_pressure": 8.4, "avg_leak": 0.21, "avg_rr": 20.4, "nights": 4 },
+    { "week": "W12", "avg_ahi": 0.17, "avg_hours": 4.2, "avg_pressure": 8.4, "avg_leak": 0.22, "avg_rr": 21.0, "nights": 4 }
+  ],
+  "nightly": [
+    { "date": "2026-01-14", "start_time": "01:11", "hours": 1.7,  "ahi": 0.00, "oa": 0, "ca": 0, "h": 0, "vs": 0, "press_avg": 7.6,  "press_95": 8.3,  "leak_avg": 0.07, "leak_95": 0.3, "rr_avg": 16.0 },
+    { "date": "2026-01-15", "start_time": "23:26", "hours": 6.1,  "ahi": 0.16, "oa": 0, "ca": 1, "h": 0, "vs": 0, "press_avg": 8.7,  "press_95": 9.5,  "leak_avg": 0.51, "leak_95": 2.0, "rr_avg": 20.5 },
+    { "date": "2026-01-18", "start_time": "01:27", "hours": 4.0,  "ahi": 0.74, "oa": 2, "ca": 0, "h": 1, "vs": 0, "press_avg": 8.9,  "press_95": 9.7,  "leak_avg": 0.08, "leak_95": 0.3, "rr_avg": 18.8 },
+    { "date": "2026-01-19", "start_time": "01:42", "hours": 1.9,  "ahi": 0.00, "oa": 0, "ca": 0, "h": 0, "vs": 0, "press_avg": 8.6,  "press_95": 9.8,  "leak_avg": 0.35, "leak_95": 1.0, "rr_avg": 20.9 },
+    { "date": "2026-01-23", "start_time": "03:33", "hours": 5.1,  "ahi": 0.20, "oa": 0, "ca": 0, "h": 1, "vs": 0, "press_avg": 8.8,  "press_95": 9.9,  "leak_avg": 1.08, "leak_95": 2.0, "rr_avg": 19.0 },
+    { "date": "2026-01-24", "start_time": "00:28", "hours": 4.7,  "ahi": 0.43, "oa": 2, "ca": 0, "h": 0, "vs": 0, "press_avg": 9.1,  "press_95": 12.3, "leak_avg": 0.25, "leak_95": 0.7, "rr_avg": 20.1 },
+    { "date": "2026-01-25", "start_time": "01:54", "hours": 4.9,  "ahi": 0.00, "oa": 0, "ca": 0, "h": 0, "vs": 0, "press_avg": 8.6,  "press_95": 8.8,  "leak_avg": 1.10, "leak_95": 2.0, "rr_avg": 20.2 },
+    { "date": "2026-01-27", "start_time": "00:58", "hours": 2.1,  "ahi": 0.00, "oa": 0, "ca": 0, "h": 0, "vs": 0, "press_avg": 8.5,  "press_95": 8.8,  "leak_avg": 0.83, "leak_95": 1.5, "rr_avg": 19.4 },
+    { "date": "2026-01-28", "start_time": "23:39", "hours": 4.7,  "ahi": 0.43, "oa": 1, "ca": 0, "h": 1, "vs": 0, "press_avg": 8.8,  "press_95": 9.6,  "leak_avg": 0.32, "leak_95": 0.6, "rr_avg": 21.0 },
+    { "date": "2026-01-29", "start_time": "00:23", "hours": 3.1,  "ahi": 0.00, "oa": 0, "ca": 0, "h": 0, "vs": 0, "press_avg": 8.7,  "press_95": 9.3,  "leak_avg": 0.55, "leak_95": 1.3, "rr_avg": 21.0 },
+    { "date": "2026-02-03", "start_time": "03:19", "hours": 4.0,  "ahi": 1.00, "oa": 1, "ca": 3, "h": 0, "vs": 0, "press_avg": 9.3,  "press_95": 11.4, "leak_avg": 0.18, "leak_95": 0.6, "rr_avg": 19.2 },
+    { "date": "2026-02-04", "start_time": "23:20", "hours": 4.0,  "ahi": 0.50, "oa": 2, "ca": 0, "h": 0, "vs": 0, "press_avg": 8.5,  "press_95": 11.6, "leak_avg": 0.35, "leak_95": 0.8, "rr_avg": 19.3 },
+    { "date": "2026-02-06", "start_time": "03:15", "hours": 4.8,  "ahi": 0.00, "oa": 0, "ca": 0, "h": 0, "vs": 0, "press_avg": 9.2,  "press_95": 11.9, "leak_avg": 0.02, "leak_95": 0.1, "rr_avg": 21.8 },
+    { "date": "2026-02-08", "start_time": "01:06", "hours": 2.2,  "ahi": 0.00, "oa": 0, "ca": 0, "h": 0, "vs": 0, "press_avg": 9.9,  "press_95": 13.2, "leak_avg": 0.00, "leak_95": 0.0, "rr_avg": 20.3 },
+    { "date": "2026-02-10", "start_time": "00:21", "hours": 5.5,  "ahi": 0.36, "oa": 1, "ca": 0, "h": 1, "vs": 0, "press_avg": 8.5,  "press_95": 9.7,  "leak_avg": 0.15, "leak_95": 0.9, "rr_avg": 19.2 },
+    { "date": "2026-02-11", "start_time": "02:33", "hours": 6.1,  "ahi": 0.49, "oa": 2, "ca": 0, "h": 1, "vs": 0, "press_avg": 8.9,  "press_95": 10.1, "leak_avg": 0.17, "leak_95": 0.8, "rr_avg": 20.0 },
+    { "date": "2026-02-12", "start_time": "00:25", "hours": 4.9,  "ahi": 0.00, "oa": 0, "ca": 0, "h": 0, "vs": 0, "press_avg": 10.1, "press_95": 12.9, "leak_avg": 0.05, "leak_95": 0.1, "rr_avg": 20.0 },
+    { "date": "2026-02-15", "start_time": "02:18", "hours": 3.2,  "ahi": 0.63, "oa": 0, "ca": 0, "h": 2, "vs": 0, "press_avg": 9.3,  "press_95": 12.9, "leak_avg": 0.12, "leak_95": 0.7, "rr_avg": 22.2 },
+    { "date": "2026-02-16", "start_time": "22:20", "hours": 7.3,  "ahi": 0.14, "oa": 1, "ca": 0, "h": 0, "vs": 0, "press_avg": 9.2,  "press_95": 11.0, "leak_avg": 0.08, "leak_95": 0.2, "rr_avg": 20.0 },
+    { "date": "2026-02-17", "start_time": "23:50", "hours": 7.7,  "ahi": 0.00, "oa": 0, "ca": 0, "h": 0, "vs": 0, "press_avg": 9.1,  "press_95": 11.1, "leak_avg": 0.05, "leak_95": 0.2, "rr_avg": 20.4 },
+    { "date": "2026-02-18", "start_time": "01:47", "hours": 7.4,  "ahi": 0.13, "oa": 0, "ca": 0, "h": 1, "vs": 0, "press_avg": 8.8,  "press_95": 10.3, "leak_avg": 0.06, "leak_95": 0.2, "rr_avg": 21.8 },
+    { "date": "2026-02-19", "start_time": "04:46", "hours": 2.3,  "ahi": 0.43, "oa": 1, "ca": 0, "h": 0, "vs": 0, "press_avg": 8.8,  "press_95": 10.1, "leak_avg": 0.19, "leak_95": 1.1, "rr_avg": 19.7 },
+    { "date": "2026-02-20", "start_time": "00:21", "hours": 5.0,  "ahi": 0.40, "oa": 1, "ca": 0, "h": 1, "vs": 0, "press_avg": 8.7,  "press_95": 10.1, "leak_avg": 0.16, "leak_95": 0.7, "rr_avg": 21.7 },
+    { "date": "2026-02-22", "start_time": "00:41", "hours": 5.2,  "ahi": 0.57, "oa": 0, "ca": 2, "h": 1, "vs": 0, "press_avg": 8.5,  "press_95": 9.4,  "leak_avg": 0.18, "leak_95": 0.6, "rr_avg": 21.3 },
+    { "date": "2026-02-23", "start_time": "23:36", "hours": 3.9,  "ahi": 0.26, "oa": 1, "ca": 0, "h": 0, "vs": 0, "press_avg": 9.0,  "press_95": 10.5, "leak_avg": 0.05, "leak_95": 0.2, "rr_avg": 19.6 },
+    { "date": "2026-02-24", "start_time": "01:46", "hours": 5.0,  "ahi": 0.00, "oa": 0, "ca": 0, "h": 0, "vs": 0, "press_avg": 8.5,  "press_95": 9.8,  "leak_avg": 0.15, "leak_95": 0.5, "rr_avg": 20.5 },
+    { "date": "2026-02-25", "start_time": "02:29", "hours": 4.0,  "ahi": 0.25, "oa": 0, "ca": 0, "h": 1, "vs": 0, "press_avg": 8.2,  "press_95": 8.9,  "leak_avg": 0.04, "leak_95": 0.1, "rr_avg": 21.4 },
+    { "date": "2026-02-26", "start_time": "01:44", "hours": 5.5,  "ahi": 0.92, "oa": 3, "ca": 0, "h": 2, "vs": 0, "press_avg": 8.8,  "press_95": 10.2, "leak_avg": 0.09, "leak_95": 0.3, "rr_avg": 22.4 },
+    { "date": "2026-02-27", "start_time": "06:35", "hours": 1.4,  "ahi": 2.17, "oa": 2, "ca": 1, "h": 0, "vs": 0, "press_avg": 9.1,  "press_95": 10.1, "leak_avg": 0.10, "leak_95": 0.3, "rr_avg": 19.2 },
+    { "date": "2026-02-28", "start_time": "05:36", "hours": 4.3,  "ahi": 0.70, "oa": 3, "ca": 0, "h": 0, "vs": 0, "press_avg": 8.8,  "press_95": 10.6, "leak_avg": 0.14, "leak_95": 0.4, "rr_avg": 20.9 },
+    { "date": "2026-03-01", "start_time": "23:29", "hours": 1.0,  "ahi": 1.00, "oa": 0, "ca": 1, "h": 0, "vs": 0, "press_avg": 8.2,  "press_95": 11.1, "leak_avg": 0.00, "leak_95": 0.0, "rr_avg": 19.1 },
+    { "date": "2026-03-02", "start_time": "23:52", "hours": 3.2,  "ahi": 0.31, "oa": 1, "ca": 0, "h": 0, "vs": 0, "press_avg": 8.8,  "press_95": 12.0, "leak_avg": 0.14, "leak_95": 1.5, "rr_avg": 22.5 },
+    { "date": "2026-03-03", "start_time": "22:43", "hours": 2.0,  "ahi": 0.00, "oa": 0, "ca": 0, "h": 0, "vs": 0, "press_avg": 9.7,  "press_95": 12.3, "leak_avg": 0.04, "leak_95": 0.2, "rr_avg": 19.8 },
+    { "date": "2026-03-04", "start_time": "23:17", "hours": 5.2,  "ahi": 0.00, "oa": 0, "ca": 0, "h": 0, "vs": 0, "press_avg": 8.5,  "press_95": 10.1, "leak_avg": 0.04, "leak_95": 0.2, "rr_avg": 21.4 },
+    { "date": "2026-03-05", "start_time": "23:15", "hours": 5.9,  "ahi": 0.85, "oa": 2, "ca": 2, "h": 1, "vs": 0, "press_avg": 9.0,  "press_95": 10.3, "leak_avg": 0.05, "leak_95": 0.1, "rr_avg": 21.9 },
+    { "date": "2026-03-06", "start_time": "01:27", "hours": 5.1,  "ahi": 0.00, "oa": 0, "ca": 0, "h": 0, "vs": 0, "press_avg": 8.5,  "press_95": 9.5,  "leak_avg": 0.02, "leak_95": 0.1, "rr_avg": 21.4 },
+    { "date": "2026-03-07", "start_time": "03:25", "hours": 4.1,  "ahi": 0.24, "oa": 1, "ca": 0, "h": 0, "vs": 0, "press_avg": 8.8,  "press_95": 10.3, "leak_avg": 0.08, "leak_95": 0.4, "rr_avg": 20.6 },
+    { "date": "2026-03-08", "start_time": "01:49", "hours": 2.6,  "ahi": 0.00, "oa": 0, "ca": 0, "h": 0, "vs": 0, "press_avg": 8.2,  "press_95": 9.2,  "leak_avg": 0.02, "leak_95": 0.1, "rr_avg": 21.8 },
+    { "date": "2026-03-09", "start_time": "02:43", "hours": 3.5,  "ahi": 0.00, "oa": 0, "ca": 0, "h": 0, "vs": 0, "press_avg": 9.1,  "press_95": 11.2, "leak_avg": 0.09, "leak_95": 0.3, "rr_avg": 20.2 },
+    { "date": "2026-03-10", "start_time": "23:02", "hours": 8.8,  "ahi": 0.46, "oa": 1, "ca": 0, "h": 3, "vs": 0, "press_avg": 8.8,  "press_95": 10.3, "leak_avg": 0.11, "leak_95": 0.4, "rr_avg": 24.8 },
+    { "date": "2026-03-11", "start_time": "23:43", "hours": 5.2,  "ahi": 0.96, "oa": 1, "ca": 1, "h": 3, "vs": 0, "press_avg": 8.2,  "press_95": 8.8,  "leak_avg": 0.06, "leak_95": 0.3, "rr_avg": 21.8 },
+    { "date": "2026-03-12", "start_time": "23:45", "hours": 5.9,  "ahi": 0.67, "oa": 2, "ca": 1, "h": 1, "vs": 0, "press_avg": 8.8,  "press_95": 9.8,  "leak_avg": 0.06, "leak_95": 0.2, "rr_avg": 21.7 },
+    { "date": "2026-03-14", "start_time": "02:05", "hours": 3.0,  "ahi": 0.00, "oa": 0, "ca": 0, "h": 0, "vs": 0, "press_avg": 8.4,  "press_95": 9.5,  "leak_avg": 0.06, "leak_95": 0.2, "rr_avg": 20.3 },
+    { "date": "2026-03-15", "start_time": "00:04", "hours": 1.6,  "ahi": 0.00, "oa": 0, "ca": 0, "h": 0, "vs": 0, "press_avg": 7.8,  "press_95": 8.2,  "leak_avg": 0.00, "leak_95": 0.0, "rr_avg": 19.5 },
+    { "date": "2026-03-17", "start_time": "04:21", "hours": 3.2,  "ahi": 0.63, "oa": 0, "ca": 0, "h": 2, "vs": 0, "press_avg": 8.4,  "press_95": 9.5,  "leak_avg": 0.55, "leak_95": 1.1, "rr_avg": 19.1 },
+    { "date": "2026-03-18", "start_time": "00:54", "hours": 3.4,  "ahi": 0.30, "oa": 0, "ca": 1, "h": 0, "vs": 0, "press_avg": 8.6,  "press_95": 9.2,  "leak_avg": 0.11, "leak_95": 0.3, "rr_avg": 21.2 },
+    { "date": "2026-03-21", "start_time": "03:10", "hours": 5.7,  "ahi": 0.35, "oa": 0, "ca": 1, "h": 1, "vs": 0, "press_avg": 8.8,  "press_95": 10.1, "leak_avg": 0.16, "leak_95": 0.5, "rr_avg": 21.9 },
+    { "date": "2026-03-22", "start_time": "23:56", "hours": 1.9,  "ahi": 0.52, "oa": 1, "ca": 0, "h": 0, "vs": 0, "press_avg": 8.3,  "press_95": 9.7,  "leak_avg": 0.07, "leak_95": 0.3, "rr_avg": 22.5 },
+    { "date": "2026-03-23", "start_time": "00:41", "hours": 6.9,  "ahi": 0.14, "oa": 1, "ca": 0, "h": 0, "vs": 0, "press_avg": 8.6,  "press_95": 9.9,  "leak_avg": 0.24, "leak_95": 0.6, "rr_avg": 21.6 },
+    { "date": "2026-03-24", "start_time": "02:40", "hours": 4.2,  "ahi": 0.00, "oa": 0, "ca": 0, "h": 0, "vs": 0, "press_avg": 8.4,  "press_95": 9.6,  "leak_avg": 0.28, "leak_95": 1.0, "rr_avg": 20.4 },
+    { "date": "2026-03-26", "start_time": "00:21", "hours": 3.6,  "ahi": 0.00, "oa": 0, "ca": 0, "h": 0, "vs": 0, "press_avg": 8.2,  "press_95": 8.8,  "leak_avg": 0.28, "leak_95": 0.8, "rr_avg": 19.4 }
+  ],
+  "labs": {
+    "hematocrit_pct": 53.6,
+    "hematocrit_flag": "HIGH",
+    "vitamin_d_ng_ml": 19,
+    "vitamin_d_flag": "DEFICIENT",
+    "ferritin_ng_ml": 34.9,
+    "hrv_avg_ms": 39,
+    "resting_hr_avg_bpm": 72
+  },
+  "action_items": [
+    { "rank": 1, "action": "Increase nightly CPAP use to 6+ hours", "why": "Averaging 4.3 hrs at 58% compliance — below clinical standard", "expected": "HRV +10-15ms, HCT normalization, MDD improvement" },
+    { "rank": 2, "action": "Shift sleep start to before midnight consistently", "why": "Circadian misalignment — going to sleep 1-4 AM on most nights", "expected": "More deep sleep, better melatonin, higher CPAP hours automatically" },
+    { "rank": 3, "action": "Increase Vitamin D3 to 5000-10000 IU daily", "why": "Level at 19 ng/mL (clinically deficient)", "expected": "Better sleep architecture, supports MDD, improves CPAP effectiveness" },
+    { "rank": 4, "action": "Discuss central apneas with sleep doctor", "why": "14 central apneas total, 3 in one night on Feb 3", "expected": "Early flag for treatment-emergent central sleep apnea" },
+    { "rank": 5, "action": "Eliminate sessions under 2 hours", "why": "6 nights under 2 hrs — highest AHI night (2.17) was a 1.4hr session", "expected": "Raises avg session length, pushes compliance past 70% target" }
+  ]
+}
+</script>
+
+<script>
+Chart.defaults.color = '#6b6866';
+Chart.defaults.borderColor = 'rgba(255,255,255,0.06)';
+
+const reportData = JSON.parse(document.getElementById('reportData').textContent);
+const ahiDates = reportData.nightly.map(n => n.date.slice(5).replace('-', '/'));
+const ahiVals  = reportData.nightly.map(n => n.ahi);
+const weeks    = reportData.weekly.map(w => w.week);
+const weekHrs  = reportData.weekly.map(w => w.avg_hours);
+const weekAHI  = reportData.weekly.map(w => w.avg_ahi);
+const timingRaw = reportData.nightly.map(n => {
+  const h = parseInt(n.start_time.split(':')[0]);
+  const m = parseInt(n.start_time.split(':')[1]);
+  return h + m/60;
+});
+const timingAdj = timingRaw.map(h => h > 12 ? h - 24 : h);
+
+new Chart(document.getElementById('ahiChart'), {
+  type: 'bar',
+  data: {
+    labels: ahiDates,
+    datasets: [{
+      data: ahiVals,
+      backgroundColor: ahiVals.map(v => v >= 15 ? '#f87171' : v >= 5 ? '#fbbf24' : '#4ade80'),
+      borderWidth: 0,
+      borderRadius: 2
+    }]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { display: false }, tooltip: {
+      backgroundColor: '#2a2a2a', borderColor: 'rgba(255,255,255,0.1)', borderWidth: 1,
+      callbacks: { title: ctx => ctx[0].label, label: ctx => `AHI: ${ctx.parsed.y.toFixed(2)}` }
+    }},
+    scales: {
+      x: { ticks: { font: { size: 9, family: 'DM Mono' }, maxRotation: 45, autoSkip: true, maxTicksLimit: 18, color: '#6b6866' }, grid: { display: false } },
+      y: { min: 0, max: 3, ticks: { font: { size: 10, family: 'DM Mono' }, color: '#6b6866', stepSize: 1 }, title: { display: true, text: 'events/hr', font: { size: 10 }, color: '#6b6866' } }
+    }
+  }
+});
+
+new Chart(document.getElementById('weeklyChart'), {
+  type: 'bar',
+  data: {
+    labels: weeks,
+    datasets: [
+      { label: 'Avg hours used', data: weekHrs, backgroundColor: weekHrs.map(h => h >= 6 ? '#4ade80' : h >= 4 ? 'rgba(74,222,128,0.5)' : 'rgba(251,191,36,0.5)'), borderRadius: 4, yAxisID: 'y1', order: 2, borderWidth: 0 },
+      { label: 'Avg AHI', data: weekAHI, type: 'line', borderColor: '#60a5fa', backgroundColor: 'rgba(96,165,250,0.1)', pointRadius: 5, pointBackgroundColor: '#60a5fa', pointBorderColor: '#1a1a1a', pointBorderWidth: 2, tension: 0.4, yAxisID: 'y2', order: 1 }
+    ]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { display: false }, tooltip: { backgroundColor: '#2a2a2a', borderColor: 'rgba(255,255,255,0.1)', borderWidth: 1 } },
+    scales: {
+      x: { grid: { display: false }, ticks: { font: { size: 11, family: 'DM Mono' }, color: '#6b6866' } },
+      y1: { position: 'left', min: 0, max: 9, title: { display: true, text: 'Hours used', font: { size: 10 }, color: '#6b6866' }, ticks: { font: { size: 10, family: 'DM Mono' }, color: '#6b6866', stepSize: 2 }, grid: { color: 'rgba(255,255,255,0.04)' } },
+      y2: { position: 'right', min: 0, max: 2, title: { display: true, text: 'AHI', font: { size: 10 }, color: '#6b6866' }, ticks: { font: { size: 10, family: 'DM Mono' }, color: '#6b6866', stepSize: 0.5 }, grid: { display: false } }
+    }
+  }
+});
+
+new Chart(document.getElementById('timingChart'), {
+  type: 'scatter',
+  data: {
+    datasets: [{
+      data: timingAdj.map((h,i) => ({ x: i, y: h })),
+      backgroundColor: timingAdj.map(h => h <= 0 ? '#4ade80' : h <= 2 ? '#fbbf24' : '#f87171'),
+      pointRadius: 4,
+      pointHoverRadius: 6
+    }]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { display: false }, tooltip: {
+      backgroundColor: '#2a2a2a', borderColor: 'rgba(255,255,255,0.1)', borderWidth: 1,
+      callbacks: { label: ctx => { const h = ctx.parsed.y; return `Bedtime: ${h < 0 ? Math.abs(h).toFixed(1)+'hr before midnight' : h === 0 ? 'Midnight' : h.toFixed(1)+'AM'}`; } }
+    }},
+    scales: {
+      x: { min: -1, max: 51, display: false },
+      y: { min: -3, max: 8, ticks: { font: { size: 10, family: 'DM Mono' }, color: '#6b6866', callback: v => v < 0 ? `${Math.abs(v)}hr before midnight` : v === 0 ? 'Midnight' : `${v}:00 AM` }, grid: { color: 'rgba(255,255,255,0.04)' } }
+    }
+  }
+});
+</script>
+</body>
+</html>
